@@ -1,57 +1,95 @@
-import Link from "next/link";
-import { prisma } from "../lib/prisma";
-import { createNote, updateNote, deleteNote } from "./actions";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useState } from "react";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ edit?: string }>;
-}) {
-  const { edit } = await searchParams;
-  const editId = edit ? Number(edit) : null;
-  const notes = await prisma.note.findMany({ orderBy: { id: "desc" } });
+type Note = { id: number; title: string; content: string };
+
+export default function Home() {
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("notes");
+      if (saved) setNotes(JSON.parse(saved));
+    } catch {}
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!loaded) return;
+    try {
+      localStorage.setItem("notes", JSON.stringify(notes));
+    } catch {}
+  }, [notes, loaded]);
+
+  function addNote(e: React.FormEvent) {
+    e.preventDefault();
+    setNotes([{ id: Date.now(), title, content }, ...notes]);
+    setTitle("");
+    setContent("");
+  }
+
+  function startEdit(n: Note) {
+    setEditId(n.id);
+    setEditTitle(n.title);
+    setEditContent(n.content);
+  }
+
+  function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    setNotes(
+      notes.map((n) =>
+        n.id === editId ? { ...n, title: editTitle, content: editContent } : n
+      )
+    );
+    setEditId(null);
+  }
+
+  function deleteNote(id: number) {
+    setNotes(notes.filter((n) => n.id !== id));
+  }
 
   return (
     <main style={{ maxWidth: 640, margin: "40px auto", padding: 16, fontFamily: "sans-serif" }}>
       <h1>Aplikasi Catatan</h1>
 
-      <form action={createNote} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
-        <input name="title" placeholder="Judul" required />
-        <textarea name="content" placeholder="Isi catatan" required />
+      <form onSubmit={addNote} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul" required />
+        <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Isi catatan" required />
         <button type="submit">Tambah Catatan</button>
       </form>
 
       <hr />
 
-      {notes.length === 0 && <p>Belum ada catatan.</p>}
+      {loaded && notes.length === 0 && <p>Belum ada catatan.</p>}
 
-      {notes.map((note) =>
-        note.id === editId ? (
-          <form key={note.id} action={updateNote} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
-            <input type="hidden" name="id" value={note.id} />
-            <input name="title" defaultValue={note.title} required />
-            <textarea name="content" defaultValue={note.content} required />
+      {notes.map((n) =>
+        n.id === editId ? (
+          <form key={n.id} onSubmit={saveEdit} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
+            <input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required />
+            <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)} required />
             <div style={{ display: "flex", gap: 8 }}>
               <button type="submit">Simpan</button>
-              <Link href="/">Batal</Link>
+              <button type="button" onClick={() => setEditId(null)}>Batal</button>
             </div>
           </form>
         ) : (
-          <div key={note.id} style={{ margin: "16px 0", padding: 12, border: "1px solid #888", borderRadius: 8 }}>
-            <h3 style={{ margin: 0 }}>{note.title}</h3>
-            <p>{note.content}</p>
+          <div key={n.id} style={{ margin: "16px 0", padding: 12, border: "1px solid #888", borderRadius: 8 }}>
+            <h3 style={{ margin: 0 }}>{n.title}</h3>
+            <p>{n.content}</p>
             <div style={{ display: "flex", gap: 8 }}>
-              <Link href={`/?edit=${note.id}`}>Edit</Link>
-              <form action={deleteNote}>
-                <input type="hidden" name="id" value={note.id} />
-                <button type="submit">Hapus</button>
-              </form>
+              <button onClick={() => startEdit(n)}>Edit</button>
+              <button onClick={() => deleteNote(n.id)}>Hapus</button>
             </div>
           </div>
         )
       )}
     </main>
   );
-} 
+}
