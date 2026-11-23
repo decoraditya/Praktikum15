@@ -5,13 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
     "next": "16.4.6",
-    "prisma": "^6.19.3",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
