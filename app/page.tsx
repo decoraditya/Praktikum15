@@ -1,69 +1,57 @@
-import Image from "next/image";
+import Link from "next/link";
+import { prisma } from "../lib/prisma";
+import { createNote, updateNote, deleteNote } from "./actions";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ edit?: string }>;
+}) {
+  const { edit } = await searchParams;
+  const editId = edit ? Number(edit) : null;
+  const notes = await prisma.note.findMany({ orderBy: { id: "desc" } });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main style={{ maxWidth: 640, margin: "40px auto", padding: 16, fontFamily: "sans-serif" }}>
+      <h1>Aplikasi Catatan</h1>
+
+      <form action={createNote} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
+        <input name="title" placeholder="Judul" required />
+        <textarea name="content" placeholder="Isi catatan" required />
+        <button type="submit">Tambah Catatan</button>
+      </form>
+
+      <hr />
+
+      {notes.length === 0 && <p>Belum ada catatan.</p>}
+
+      {notes.map((note) =>
+        note.id === editId ? (
+          <form key={note.id} action={updateNote} style={{ display: "grid", gap: 8, margin: "16px 0" }}>
+            <input type="hidden" name="id" value={note.id} />
+            <input name="title" defaultValue={note.title} required />
+            <textarea name="content" defaultValue={note.content} required />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="submit">Simpan</button>
+              <Link href="/">Batal</Link>
+            </div>
+          </form>
+        ) : (
+          <div key={note.id} style={{ margin: "16px 0", padding: 12, border: "1px solid #888", borderRadius: 8 }}>
+            <h3 style={{ margin: 0 }}>{note.title}</h3>
+            <p>{note.content}</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Link href={`/?edit=${note.id}`}>Edit</Link>
+              <form action={deleteNote}>
+                <input type="hidden" name="id" value={note.id} />
+                <button type="submit">Hapus</button>
+              </form>
+            </div>
+          </div>
+        )
+      )}
+    </main>
   );
-}
+} 
